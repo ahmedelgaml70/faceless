@@ -30,3 +30,5 @@ How geysers shoot hot water into the air
 Why icebergs float in the ocean
 How rain makes droplets on plant leaves
 Why volcanoes create ash clouds
+
+# Photo-vision filter regression test trigger (ignored)
