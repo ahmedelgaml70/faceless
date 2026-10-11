@@ -1,53 +1,53 @@
-# Faceless — Gemini Shorts Automation
+# Faceless Science — Gemini Shorts automation
 
-A **$0-software-cost prototype** for generating one AI-assisted YouTube Short on GitHub Actions. No local language model or continuously running laptop required.
+**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 2 adds licensed visual sourcing, original diagrams, unique scene matching, clearer scripts, attribution, and a fail-closed quality gate. **The new version still needs its first live test.**
 
-## What happens
+## Zero paid software, no local LLM
 
-GitHub Actions → topic selection → Gemini API script → Kokoro voiceover → FFmpeg video/captions → downloadable GitHub Actions artifact.
+Pipeline: GitHub Actions → Gemini script + second-pass editorial review → Wikimedia Commons photo selection (Public Domain, CC0, and CC BY 2/3/4 only) → otherwise locally rendered original diagrams → Kokoro narration → FFmpeg render → independent technical/licence-metadata QA → GitHub artifact.
 
-**Status:** video generation is configured for manual testing first. YouTube uploads are **OFF** by default and must be separately authorized using OAuth credentials. No videos publish publicly from this repository.
+No Ollama, paid video platform, cloud hosting subscription, or Mac computer required. Standard hosted GitHub runners for **public repositories** are free under GitHub Actions terms. Confirm your Gemini account is on an eligible **Free** tier, and keep spending caps at $0. Free software does not mean guaranteed YouTube earnings.
 
-## Quick start
+## Run it
 
-1. Go to **Settings → Secrets and variables → Actions → Secrets → New repository secret**.
-2. Create secret **GEMINI_API_KEY** (use the key you already have; never commit or share it).
-3. Make sure your Gemini project is using its **Free tier**. GitHub Actions is free for public repositories with standard hosted runners, subject to GitHub usage policies; if you make this private, confirm remaining included minutes and your spending limit.
-4. Go to **Actions → Generate Gemini Short → Run workflow**. Enter a topic, or leave it blank for an automatic suggestion from `topics.txt`.
-5. Open that workflow run → **Artifacts** → download `shorts-preview-...` after it finishes.
-6. Review the video, its claims, visuals, and audio before doing any public publishing.
+1. In repository **Settings → Secrets and variables → Actions → Secrets**, save your Gemini key as **GEMINI_API_KEY**.
+2. Open **Actions → Generate Gemini Short → Run workflow**. Optionally supply a specific science topic.
+3. After completion, download **shorts-preview-N** from the run's Artifacts section. It includes the MP4, script, scene licensing manifest, attribution in the description metadata, and the QA report.
+4. Check video, audio, visual suitability, citations, factual claims and originality before publication. **A passing automatic check does not constitute human/editorial approval.**
 
-The workflow uses the open-source [PurffleShorts](https://github.com/Chamanrajragu/purffle-shorts) rendering engine **pinned to commit `bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8`**. This runs third-party code in a GitHub Actions runner. It has not been independently end-to-end tested with your credentials.
+If Commons is inaccessible or produces fewer than **2 usable licensed visuals** for the topic, the workflow will **fail closed**, saving diagnostics rather than uploading a generic all-gradient video. Change the topic and run again; do not treat an automatic video as cleared for publication.
 
-## Gemini and optional image sourcing
+### Automatic daily generation
 
-The default Gemini model is `gemini-3.5-flash-lite`, which Google advertises with a free API tier subject to availability and quota. Change it via repository **Actions variable** `GEMINI_MODEL` if needed.
+The `schedule` event in `.github/workflows/generate-shorts.yml` remains commented out. Enable it only after repeated manually inspected outputs succeed. Scheduled jobs may be delayed or skipped. All generated videos remain previews unless you explicitly enable the separate private-upload setting.
 
-Without stock media, local/procedural backgrounds may look basic. You can optionally add a free Pixabay API key as the **PIXABAY_API_KEY** secret to request stock visuals subject to Pixabay terms, rates, and availability.
+### Default visuals and licenses
 
-Never rely on AI scripts without fact-checking. This is a technical video-generation experiment, **not a guaranteed monetization system**.
+`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, it creates simple original labelled diagrams instead of stock images. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
 
-## Automatic scheduling
+### QA
 
-For safety, automatic daily runs are **disabled until the first manual test succeeds**. When ready, enable the commented `schedule` event in `.github/workflows/generate-shorts.yml`. GitHub scheduled workflows may run late or be dropped. Keep to a low initial output frequency.
+`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least two Commons visuals; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
 
-## Future private YouTube upload setup
+### Optional YouTube private uploads
 
-Uploading requires a separate **Google OAuth Desktop client** for YouTube Data API v3 (a Gemini API key does not authorize uploads).
+**Off by default.** Your Gemini API key cannot authorize uploading to YouTube.
 
-1. Set up YouTube Data API v3 and OAuth Desktop client on Google Cloud Console.
-2. Authorize YouTube **locally once** with PurffleShorts using `python -m purffle_shorts auth` and your downloaded `credentials.json`. It creates a `token.json` containing a refresh token. A token from an OAuth app in Testing mode can expire quickly.
-3. Store the full `token.json` as an Actions secret named **YOUTUBE_TOKEN_JSON**. Never upload `credentials.json`, `token.json`, or API keys to your repository.
-4. Create an Actions **variable** named `PRIVATE_UPLOAD_ENABLED` with value `true`.
-5. Re-run manually and confirm that the video appears **Private** in YouTube Studio.
-6. If upload fails, set `PRIVATE_UPLOAD_ENABLED` back to `false`.
+1. In Google Cloud, enable **YouTube Data API v3**, create an OAuth Desktop application, and download its client JSON. Do not commit it.
+2. On a trusted machine, authorize once using PurffleShorts (`python -m purffle_shorts auth`). It writes a refreshable `token.json`. OAuth apps in Testing status often issue short-lived refresh tokens.
+3. Store the entire `token.json` as Actions secret **YOUTUBE_TOKEN_JSON**. Never paste the token into source code or a public issue.
+4. Add an Actions variable **PRIVATE_UPLOAD_ENABLED** with value `true`. The upload step will run **only after the quality gate passes**, and uploads use YouTube's **private** privacy setting.
+5. Confirm the next test's video appears as Private in YouTube Studio. Disable the variable on any unexpected behavior.
 
-The workflow explicitly requests **private**, never public, uploads. The pipeline alone cannot guarantee YouTube monetization, copyright clearance, or factual accuracy. Creator monetization reviews disallow repetitive low-value content.
+**Security:** This repo remains public; don't place credentials in it. The third-party PurffleShorts source is pinned to `bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8`. It is installed in GitHub-hosted runners; you should review third-party code before granting it YouTube access.
 
-## Operational details
+## Relevant files
 
-- `permissions: contents: read` for minimal GitHub access.
-- No credentials are committed to the repository.
-- Rendering uses a temporary hosted Linux runner; it does not persist the videos except as workflow artifacts.
-- Runner/install time and third-party API quotas may limit use.
-- Keep a tight Actions budget on any billable GitHub plan and confirm Gemini Free-tier status to maintain a true $0 plan.
+- `.github/workflows/generate-shorts.yml`: manual workflow and optional private upload
+- `.github/workflows/validate.yml`: lightweight syntax and topic-rotation check
+- `scripts/select_topic.py`: rotation of pre-selected factual topics
+- `scripts/prepare_content.py`: Gemini + Wikimedia + custom diagram assets
+- `scripts/quality_check.py`: fail-closed post-render gate
+- `topics.txt`: topic bank
+
+**Next milestone:** successfully run the updated workflow, inspect its generated MP4 and licensing manifest, and adjust any genuine API or quality failures.
