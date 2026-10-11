@@ -38,3 +38,5 @@ What causes an eclipse of the Sun
 Why pressure increases with ocean depth
 Why ocean water is salty
 How magnetism drives an electric motor
+
+# Automated visual-asset integration test marker (ignored by selector)
