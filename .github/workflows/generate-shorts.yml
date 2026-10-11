@@ -1,6 +1,9 @@
 name: Generate Gemini Short
 
 on:
+  push:
+    paths:
+      - 'topics.txt'
   workflow_dispatch:
     inputs:
       topic:
@@ -80,6 +83,9 @@ jobs:
             exit 1
           fi
           TOPIC="$(python ../scripts/select_topic.py ../topics.txt)"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            TOPIC="How a rainbow forms after rain"
+          fi
           echo "Topic: $TOPIC"
           python ../scripts/prepare_storyboard.py "$TOPIC"
 
