@@ -46,3 +46,5 @@ How magnetism drives an electric motor
 # One-time cinematic production test (comment ignored)
 
 # Third visual preview trigger (ignored)
+
+# Photo-only integration check; ignored by topic chooser
