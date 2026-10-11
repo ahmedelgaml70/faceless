@@ -107,7 +107,7 @@ jobs:
       # This step runs ONLY if video quality checks pass and the owner explicitly
       # enables private uploads. No public video is ever published here.
       - name: Optional upload as PRIVATE to YouTube
-        if: ${{ vars.PRIVATE_UPLOAD_ENABLED == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && vars.PRIVATE_UPLOAD_ENABLED == 'true' }}
         working-directory: engine
         shell: bash
         env:
