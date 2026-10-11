@@ -67,7 +67,7 @@ jobs:
           git -C engine checkout --detach bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8
           python -m pip install -e './engine[kokoro]'
 
-      - name: Write script and source ONLY real licensed photographs
+      - name: Verify authentic photos and write scene-matched Gemini storyboard
         working-directory: engine
         shell: bash
         env:
@@ -81,7 +81,7 @@ jobs:
           fi
           TOPIC="$(python ../scripts/select_topic.py ../topics.txt)"
           echo "Topic: $TOPIC"
-          python ../scripts/prepare_content.py "$TOPIC"
+          python ../scripts/prepare_storyboard.py "$TOPIC"
 
       - name: Render reviewed-script draft
         working-directory: engine
@@ -138,6 +138,8 @@ jobs:
             engine/prepared/visual_manifest.json
             engine/prepared/quality_report.json
             engine/prepared/cinematic_report.json
+            engine/prepared/selection_report.json
+            engine/media/*.jpg
           if-no-files-found: warn
           retention-days: 3
           compression-level: 0
