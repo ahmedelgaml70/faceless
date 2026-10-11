@@ -15,7 +15,11 @@ def main() -> int:
                   if line.strip() and not line.lstrip().startswith("#")]
         if not topics:
             raise SystemExit("No topics configured in topics.txt")
-        index = dt.datetime.now(dt.timezone.utc).date().toordinal() % len(topics)
+        # Each GitHub workflow execution advances the topic even if retried
+        # multiple times on the same day. A manual topic always overrides.
+        day = dt.datetime.now(dt.timezone.utc).date().toordinal()
+        run = int(os.environ.get("GITHUB_RUN_NUMBER", "1") or "1")
+        index = (day + max(0, run - 1)) % len(topics)
         topic = topics[index]
     print(" ".join(topic.split())[:170])
 
