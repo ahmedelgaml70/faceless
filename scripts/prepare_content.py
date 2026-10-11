@@ -13,6 +13,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 import re
 import sys
 import time
@@ -72,7 +73,7 @@ def find_candidates(query: str) -> list[dict]:
         "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 1280,
         "format": "json", "formatversion": 2,
     }
-    response = requests.get(COMMONS, params=params, headers=HEADERS, timeout=18)
+    response = requests.get(COMMONS, params=params, headers=HEADERS, timeout=12)
     response.raise_for_status()
     results = response.json().get("query", {}).get("pages", [])
     valid = []
@@ -101,9 +102,10 @@ def find_candidates(query: str) -> list[dict]:
 
 def get_image(src: dict) -> Image.Image:
     url = src["image_url"]
-    if not url.startswith("https://"):
-        raise ValueError("Refusing non-HTTPS media URL")
-    r = requests.get(url, headers={**HEADERS, "Accept": "image/*"}, timeout=35)
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.hostname not in ("upload.wikimedia.org", "commons.wikimedia.org"):
+        raise ValueError("Refusing external media host")
+    r = requests.get(url, headers={**HEADERS, "Accept": "image/*"}, timeout=18)
     r.raise_for_status()
     if len(r.content) > 12_000_000 or not r.headers.get("Content-Type", "").startswith("image/"):
         raise ValueError("Unexpected media content")
