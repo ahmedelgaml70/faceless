@@ -8,9 +8,6 @@ on:
         type: string
         required: false
         default: "How waterfalls shape rocky canyons"
-  push:
-    paths:
-      - '.github/workflows/motion-preview.yml'
 
 permissions:
   contents: read
