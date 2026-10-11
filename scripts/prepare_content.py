@@ -39,7 +39,8 @@ BAD_TITLE = ("logo", "trademark", "flag of", "icon of", "sounders", "football",
              "rendering", "rendered", "vector", "painting", "screenshot",
              "map of", "ai-generated", "midjourney", "stable diffusion", "dall-e",
              "synthetic image", "meme", "poster", "graphic design", "infographic",
-             "artwork", ".svg")
+             "artwork", ".svg", " in 3d", "3-d", "3d model", "simulation",
+             "computer generated", "cgi ", "model of", "visualization", "visualisation")
 STOP = {"that","from","with","into","near","over","under","this","those",
         "some","there","their","close","photo","stock","image","video",
         "light","bright","dark","high","low","view","scene","visual","sound"}
@@ -94,7 +95,7 @@ def stems(text: str) -> set[str]:
 
 def candidates(query: str) -> list[dict]:
     params = {"action":"query","generator":"search","gsrsearch":query[:90],
-              "gsrnamespace":6,"gsrlimit":24,"prop":"imageinfo",
+              "gsrnamespace":6,"gsrlimit":45,"prop":"imageinfo",
               "iiprop":"url|size|mime|extmetadata","iiurlwidth":1200,
               "format":"json","formatversion":2}
     reply=requests.get(COMMONS, params=params, headers=HEADERS, timeout=15)
@@ -155,7 +156,24 @@ def choose_photo(query: str, topic: str, used: Counter,
                  memo: dict[str,list[dict]]) -> tuple[Image.Image, dict, str]:
     simplified=" ".join(query.split()[:2])
     broad=topic_query(topic)
-    searches=list(dict.fromkeys(x for x in (query,simplified,broad,topic) if x))
+    # When Wikimedia has no exact multiword file, try concrete subject words.
+    # Still require literal overlap with the photograph's filename: this is not
+    # permission to substitute unrelated art or abstract diagrams.
+    keywords=[w for w in re.findall(r"[a-z]{4,}",query.casefold()) if w not in STOP]
+    synonyms={
+        "storm": ["thunderstorm","clouds","lightning"],
+        "clouds": ["cloud","cumulonimbus","thunderstorm"],
+        "lightning": ["thunderstorm","lightning strike"],
+        "thunder": ["lightning","thunderstorm"],
+        "heat": ["sun","solar"],
+        "sun": ["solar","sunspots"],
+        "wave": ["ocean waves"],
+        "wind": ["storm","clouds"],
+    }
+    expanded=[term for key in keywords for term in synonyms.get(key,[])]
+    searches=list(dict.fromkeys(x for x in (
+        query,simplified,*keywords,*expanded,broad,topic
+    ) if x))
     for phrase in searches:
         if phrase not in memo:
             try:
@@ -182,7 +200,8 @@ def choose_photo(query: str, topic: str, used: Counter,
                 continue
             used[src["page"]]+=1
             src=dict(src, title_overlap_terms=overlap)
-            return photo,src,"direct" if phrase in (query,simplified) else "topic-broll"
+            direct_phrases={query,simplified,*keywords,*expanded}
+            return photo,src,"direct" if phrase in direct_phrases else "topic-broll"
     raise RuntimeError(f"No licensed REAL photo for scene query {query!r}. "
                        "Refusing a drawn/irrelevant fallback. Try a more filmable topic.")
 
