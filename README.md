@@ -6,14 +6,14 @@
 
 The former system **wrote a script first** and struggled to find photography for claims such as "shock wave expands like a balloon." That produced irrelevant stock visuals or a failed job.
 
-The new system does the reverse:
+The new system does the reverse, and shortens the video rather than adding unrelated filler when fewer authentic photos are available:
 
 1. Pick a camera-filmable science topic from `topics.txt` (or the manually entered workflow topic).
 2. Search public Commons image files in several *topic-specific* search groups.
 3. Check the exact file's rights metadata: only Public Domain, CC0 and certain CC BY licenses are accepted; exclude unknown, ND, NC, SA and SVG/illustration media.
 4. Use the Gemini API to **inspect the image pixels**; reject drawings, ads, mislabelled pictures and irrelevant results.
-5. Reject near-duplicate photographs and require **six different approved photos**. If there aren't six, fail safely.
-6. Tell Gemini what the six real shots depict, in a fixed order, and ask it to write exactly six connected scenes **for those shots** (roughly 70–125 narrated words).
+5. Reject near-duplicate photographs and require **at least four and up to six different approved photos**. If there aren't six, fail safely.
+6. Tell Gemini what the four to six real shots depict, in a fixed order, and ask it to write exactly four to six connected scenes **for those shots** (roughly 70–125 narrated words).
 7. Render Kokoro narration with PurffleShorts, then replace the base visuals with gentle photo pans/crops and **text-only lower-third subtitles**. No fake scientific overlays.
 8. Reject videos that violate media licensing, photo/scene matching, portrait video format, audio, or storyboard-grounding requirements. Save MP4, source photos, scripts, QA report and photographer credits in the workflow artifact.
 
@@ -46,4 +46,4 @@ For YouTube OAuth authorization, use a properly configured Google Cloud YouTube 
 - `.github/workflows/generate-shorts.yml` — manual generation and disabled-by-default private upload
 - `.github/workflows/validate.yml` — source-compilation and topic checks
 
-Next milestone: inspect a successfully generated six-shot visual-first documentary, then source more authentic *moving camera footage* when rights-compatible clips are available. The pipeline is not a guarantee of YouTube monetization or a $3,000/month income.
+Next milestone: inspect a successfully generated photo-grounded visual-first documentary, then source more authentic *moving camera footage* when rights-compatible clips are available. The pipeline is not a guarantee of YouTube monetization or a $3,000/month income.
