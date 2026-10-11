@@ -147,6 +147,8 @@ def scene_spans(script: dict, duration: float, raw_cues: list[tuple[float, float
 
 def scene_category(search: str, narration: str) -> str:
     s = (search + " " + narration).casefold()
+    if "balloon" in s:
+        return "balloon"
     for category, words in [
         ("lightning", ("lightning", "electric", "bolt", "spark")),
         ("heat", ("temperature", "heat", "hotter", "degree", "sun surface", "superheat")),
@@ -168,6 +170,7 @@ def scene_label(query: str, narration: str, category: str) -> str:
         "lightning": "THE ELECTRIC FLASH",
         "heat": "EXTREME HEAT",
         "shockwave": "RAPID EXPANSION",
+        "balloon": "LIKE A BURSTING BALLOON",
         "sound": "THE SOUND WAVE",
         "space": "IN SPACE",
         "weather": "THE ATMOSPHERE",
@@ -197,9 +200,9 @@ def scene_background(photo: Image.Image) -> Image.Image:
     photo = ImageOps.exif_transpose(photo).convert("RGB")
     # Blur-based full-bleed background, high-detail foreground with no black bars.
     cover = ImageOps.fit(photo, (W, H), method=Image.Resampling.LANCZOS)
-    blurred = cover.filter(ImageFilter.GaussianBlur(27))
-    blurred = Image.blend(blurred, Image.new("RGB", (W, H), "#091d31"), .51)
-    return blurred
+    # The prepared art already contains a carefully positioned sharp image.
+    # Do NOT blur the full frame; that hid the actual footage in version 1.
+    return ImageEnhance.Color(cover).enhance(1.10)
 
 
 def gradient_mask() -> Image.Image:
@@ -252,6 +255,29 @@ def draw_science(layer: Image.Image, category: str, t: float, scene_elapsed: flo
         d.line(pts, fill=(111, 229, 255, opacity//4), width=37, joint="curve")
         d.line(pts, fill=(243, 251, 255, opacity), width=10, joint="curve")
         draw_rings(d, s, SKY, 330, 540)
+    elif category == "balloon":
+        inflate = smooth(min(1.0, s/2.2))
+        size = int(130 + 135*inflate)
+        x, y = 355, 540
+        d.ellipse((x-size,y-size,x+size,y+size),fill=(52,136,196,85),
+                  outline=(151,233,253,205),width=7)
+        d.ellipse((x-size//2,y-size//2,x-size//2+85,y-size//2+140),
+                  outline=(230,249,255,110),width=8)
+        d.line((x,y+size,x+20,y+size+95), fill=(245,222,171,175), width=5)
+        if s>2.0:
+            for j in range(9):
+                a=j*math.tau/9
+                xx=int(x+((s-2)*120+size)*math.cos(a))
+                yy=int(y+((s-2)*120+size)*math.sin(a))
+                d.ellipse((xx-8,yy-8,xx+8,yy+8),fill=(151,233,253,180))
+    elif category == "weather":
+        for x,y,r in ((230,465,100),(340,410,135),(475,470,110)):
+            d.ellipse((x-r,y-r,x+r,y+r),fill=(104,158,198,45),
+                      outline=(170,217,239,110),width=4)
+        for j in range(6):
+            x=175+j*69+int(s*17)%35
+            y=650+j%3*40+int(s*27)%70
+            d.line((x,y,x-22,y+58),fill=(134,213,250,140),width=5)
     elif category in ("shockwave", "sound", "water"):
         for k in range(5):
             ph = (s*.36 + k*.2) % 1
@@ -303,12 +329,16 @@ def draw_science(layer: Image.Image, category: str, t: float, scene_elapsed: flo
 
 def draw_frame(photo: Image.Image, category: str, label: str, idx: int,
                scenes_n: int, t: float, start: float, end: float, duration: float,
-               caption: str, cap_in: float) -> Image.Image:
+               caption: str, cap_in: float, is_photo: bool) -> Image.Image:
     img = pan_photo(photo, t, start, end, idx).convert("RGBA")
     img = Image.alpha_composite(img, GRADIENT)
 
     fx = Image.new("RGBA", (W, H), (0,0,0,0))
     draw_science(fx, category, t, t-start, idx)
+    # A real licensed photograph should be the hero; animated HUD elements are
+    # deliberately subtle on top of photos and stronger on original diagrams.
+    if is_photo:
+        fx.putalpha(fx.getchannel("A").point(lambda a: int(a * 0.30)))
     img = Image.alpha_composite(img, fx)
     d = ImageDraw.Draw(img, "RGBA")
 
@@ -399,7 +429,8 @@ def render(root: Path) -> None:
                 category=scene_category(m["query"],scenes[idx]["narration"])
                 label=scene_label(m["query"],scenes[idx]["narration"],category)
                 img=draw_frame(base[idx],category,label,idx,len(scenes),t,
-                               span[idx],span[idx+1],duration,caption,cap_in)
+                               span[idx],span[idx+1],duration,caption,cap_in,
+                               m["kind"] == "wikimedia-commons")
                 try:
                     proc.stdin.write(img.tobytes())
                 except BrokenPipeError as exc:
