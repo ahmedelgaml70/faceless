@@ -4,7 +4,7 @@
 
 ## Zero paid software, no local LLM
 
-Pipeline: GitHub Actions → Gemini script + editorial rewrite → licensed Wikimedia Commons **photographs** → Kokoro narration → PurffleShorts audio base → photographic re-edit (gentle pan and zoom + text-only captions) → photo-only quality gate → downloadable preview.
+Pipeline: GitHub Actions → Gemini script + editorial rewrite → licensed Wikimedia Commons **photographs** → Gemini image-understanding visual relevance check → Kokoro narration → PurffleShorts audio base → photographic re-edit (gentle pan and zoom + text-only captions) → photo-only quality gate → downloadable preview.
 
 No Ollama, paid video platform, cloud hosting subscription, or Mac computer required. Standard hosted GitHub runners for **public repositories** are free under GitHub Actions terms. Confirm your Gemini account is on an eligible **Free** tier, and keep spending caps at $0. Free software does not mean guaranteed YouTube earnings.
 
@@ -23,11 +23,11 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 
 ### Default visuals and licenses
 
-`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, the job fails rather than generating any illustration, SVG, diagram or misleading stock footage. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
+`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, or if Gemini detects an irrelevant photo, the job fails rather than generating any illustration, SVG, diagram or misleading stock footage. Each run allows at most 16 additional Gemini vision requests; the workflow stops if rate limits are encountered. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
 
 ### QA
 
-`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least three unique Commons photographs and two direct scene matches; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
+`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least three unique Commons photographs, two direct scene matches, and Gemini visual approval for every photo; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
 
 ### Optional YouTube private uploads
 
