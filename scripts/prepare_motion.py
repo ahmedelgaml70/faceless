@@ -21,6 +21,7 @@ import urllib.parse
 
 import requests
 from PIL import Image, ImageOps
+from purffle_shorts.config import Settings
 
 from prepare_content import (
     COMMONS, HEADERS, MEDIA, PREPARED, BAD_TITLE, plain, rights,
