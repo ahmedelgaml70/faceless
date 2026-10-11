@@ -1,54 +1,49 @@
-# Faceless Science — Gemini Shorts automation
+# Faceless Science — visuals-first Gemini Shorts
 
-**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 4 removes ALL drawn diagrams, SVG/vector artwork, programmed animations and fake visual replacements. It uses real Wikimedia Commons photographs only, modest camera moves and text-only captions. Videos fail closed when enough relevant licensed photos cannot be found. **Version 4 still needs its first full render test.**
+**Version 5: photo-grounded storytelling.** This project automatically creates faceless educational Shorts on GitHub Actions using Gemini, authentic Wikimedia Commons photography, Kokoro narration and FFmpeg. It does **not** draw SVGs, graphics, cartoons, diagrams, or generate AI substitute images.
 
-## Zero paid software, no local LLM
+## Why the new pipeline is different
 
-Pipeline: GitHub Actions → Gemini script + editorial rewrite → licensed Wikimedia Commons **photographs** → Gemini image-understanding visual relevance check → Kokoro narration → PurffleShorts audio base → photographic re-edit (gentle pan and zoom + text-only captions) → photo-only quality gate → downloadable preview.
+The former system **wrote a script first** and struggled to find photography for claims such as "shock wave expands like a balloon." That produced irrelevant stock visuals or a failed job.
 
-No Ollama, paid video platform, cloud hosting subscription, or Mac computer required. Standard hosted GitHub runners for **public repositories** are free under GitHub Actions terms. Confirm your Gemini account is on an eligible **Free** tier, and keep spending caps at $0. Free software does not mean guaranteed YouTube earnings.
+The new system does the reverse:
 
-## Run it
+1. Pick a camera-filmable science topic from `topics.txt` (or the manually entered workflow topic).
+2. Search public Commons image files in several *topic-specific* search groups.
+3. Check the exact file's rights metadata: only Public Domain, CC0 and certain CC BY licenses are accepted; exclude unknown, ND, NC, SA and SVG/illustration media.
+4. Use the Gemini API to **inspect the image pixels**; reject drawings, ads, mislabelled pictures and irrelevant results.
+5. Reject near-duplicate photographs and require **six different approved photos**. If there aren't six, fail safely.
+6. Tell Gemini what the six real shots depict, in a fixed order, and ask it to write exactly six connected scenes **for those shots** (roughly 70–125 narrated words).
+7. Render Kokoro narration with PurffleShorts, then replace the base visuals with gentle photo pans/crops and **text-only lower-third subtitles**. No fake scientific overlays.
+8. Reject videos that violate media licensing, photo/scene matching, portrait video format, audio, or storyboard-grounding requirements. Save MP4, source photos, scripts, QA report and photographer credits in the workflow artifact.
 
-1. In repository **Settings → Secrets and variables → Actions → Secrets**, save your Gemini key as **GEMINI_API_KEY**.
-2. Open **Actions → Generate Gemini Short → Run workflow**. Optionally supply a specific science topic.
-3. After completion, download **shorts-preview-N** from the run's Artifacts section. It includes the MP4, script, scene licensing manifest, visual style report, attribution in the description metadata, and the QA report.
-4. Check video, audio, visual suitability, citations, factual claims and originality before publication. **A passing automatic check does not constitute human/editorial approval.**
+This approach values authenticity over output volume. It may fail if Commons or the Gemini Free tier cannot supply the required imagery.
 
-If Commons is inaccessible or produces fewer than **3 distinct suitable licensed photographs** and at least 2 directly matched scenes, the workflow will **fail closed** and never upload a fallback drawing. Change the topic and run again; do not treat an automatic video as cleared for publication.
+## Run for $0 (within applicable free limits)
 
-### Automatic daily generation
+- Open [Generate Gemini Short](https://github.com/ahmedelgaml70/faceless/actions/workflows/generate-shorts.yml), then **Run workflow**. Start with a very visual topic such as **How a rainbow forms after rain**.
+- Set the **GEMINI_API_KEY** Actions secret; the key stays private. The existing Gemini API project must be eligible for free API calls to maintain the $0 cost requirement. Do not add billing or upgrades just for this prototype.
+- After a successful run, open **Artifacts → shorts-preview-N**, then review `short.mp4`, `script.json`, `visual_manifest.json`, `selection_report.json`, `quality_report.json`, and the sourced `media/*.jpg` photographs.
+- Verify scientific claims, reuse permissions, context and how the final images appear before publishing.
 
-The `schedule` event in `.github/workflows/generate-shorts.yml` remains commented out. Enable it only after repeated manually inspected outputs succeed. Scheduled jobs may be delayed or skipped. All generated videos remain previews unless you explicitly enable the separate private-upload setting.
+The script is *AI-authored* and the image relevance check is *AI-assisted*. Neither guarantees scientific accuracy, copyright clearance, originality or viewer retention. The resulting media remains subject to manual review before any public publication.
 
-### Default visuals and licenses
+## Operational controls
 
-`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, or if Gemini detects an irrelevant photo, the job fails rather than generating any illustration, SVG, diagram or misleading stock footage. Each run allows at most 16 additional Gemini vision requests; the workflow stops if rate limits are encountered. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
+GitHub-hosted runners can execute without a running Mac, using public-repository GitHub Actions subject to platform policies. `schedule` is **disabled** for video generation. Video generation only runs when you explicitly start it. Video uploads are **OFF** by default. YouTube is never uploaded from CI/push validation runs; the optional manual-run upload step requires explicit `PRIVATE_UPLOAD_ENABLED=true`, a valid private `YOUTUBE_TOKEN_JSON` OAuth secret, a passing QA check, and always requests **Private** privacy. A Gemini API key does not authorize YouTube uploads.
 
-### QA
+For YouTube OAuth authorization, use a properly configured Google Cloud YouTube Data API OAuth Desktop client and `python -m purffle_shorts auth` on a trusted machine, then store only the resulting `token.json` as GitHub Actions secret `YOUTUBE_TOKEN_JSON`. Do **not** commit tokens or credentials to this public repository. Google OAuth Testing refresh tokens may expire.
 
-`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least three unique Commons photographs, two direct scene matches, and Gemini visual approval for every photo; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
+**Security:** The third-party PurffleShorts renderer runs code from a commit pinned in the Actions workflow; review that code before granting it OAuth access. Official MediaWiki licenses are per-file; user-entered metadata can be wrong, so verify Commons description pages and any additional reuse conditions. Photographer attribution is appended to the YouTube description for CC BY photos.
 
-### Optional YouTube private uploads
+## Project files
 
-**Off by default.** Your Gemini API key cannot authorize uploading to YouTube.
+- `scripts/prepare_storyboard.py` — select six real licensed photos **before** writing the narration
+- `scripts/prepare_content.py` — Commons API fetching, title checks, Gemini visual verification and safe photo cropping (shared helpers)
+- `scripts/cinematic_post.py` — genuine-photo Ken Burns movement, short dissolves and lower-third captions
+- `scripts/quality_check.py` — fail-closed technical and licensing metadata checks
+- `topics.txt` — photography-friendly science topics
+- `.github/workflows/generate-shorts.yml` — manual generation and disabled-by-default private upload
+- `.github/workflows/validate.yml` — source-compilation and topic checks
 
-1. In Google Cloud, enable **YouTube Data API v3**, create an OAuth Desktop application, and download its client JSON. Do not commit it.
-2. On a trusted machine, authorize once using PurffleShorts (`python -m purffle_shorts auth`). It writes a refreshable `token.json`. OAuth apps in Testing status often issue short-lived refresh tokens.
-3. Store the entire `token.json` as Actions secret **YOUTUBE_TOKEN_JSON**. Never paste the token into source code or a public issue.
-4. Add an Actions variable **PRIVATE_UPLOAD_ENABLED** with value `true`. The upload step will run **only after the quality gate passes**, and uploads use YouTube's **private** privacy setting.
-5. Confirm the next test's video appears as Private in YouTube Studio. Disable the variable on any unexpected behavior.
-
-**Security:** This repo remains public; don't place credentials in it. The third-party PurffleShorts source is pinned to `bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8`. It is installed in GitHub-hosted runners; you should review third-party code before granting it YouTube access.
-
-## Relevant files
-
-- `.github/workflows/generate-shorts.yml`: manual workflow and optional private upload
-- `.github/workflows/validate.yml`: lightweight syntax and topic-rotation check
-- `scripts/select_topic.py`: rotation of pre-selected factual topics
-- `scripts/prepare_content.py`: Gemini + strictly licensed Commons real photographs; no illustrations
-- `scripts/cinematic_post.py`: **no drawn graphics**; real-photo camera movement and text-only captions
-- `scripts/quality_check.py`: fail-closed post-render gate
-- `topics.txt`: topic bank
-
-**Next milestone:** inspect a no-drawing video preview, verify source-visual relevance, and improve narration and audience pacing. Technical success alone is not evidence of content quality.
+Next milestone: inspect a successfully generated six-shot visual-first documentary, then source more authentic *moving camera footage* when rights-compatible clips are available. The pipeline is not a guarantee of YouTube monetization or a $3,000/month income.
