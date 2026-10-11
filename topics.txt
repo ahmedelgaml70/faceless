@@ -1,52 +1,32 @@
-Why the Moon is slowly moving away from Earth
-Why airplane windows have rounded corners
-How geckos walk on glass
-What makes the sky look blue
-Why ice floats on liquid water
-How a hummingbird can hover
-Why soap removes oily dirt
-Why astronauts appear weightless in orbit
-How bees communicate the location of food
-Why a rainbow forms a circular arc
-How a seed knows which direction to grow
-Why metal feels colder than wood
-What causes ocean tides
-How satellites remain in orbit
-Why some animals glow in the dark
-How sound travels through air
-Why Venus has a hotter surface than Mercury
-How octopuses change skin color
-Why the International Space Station needs reboosts
-How a telescope gathers faint light
-How lightning produces thunder
-Why there are seasons on Earth
-How ants navigate back to their nests
-How a refrigerator moves heat from inside to outside
-Why stars twinkle from the ground
-How a microwave oven heats food
-How a compass points toward magnetic north
-What creates the Northern Lights
-How a submarine changes its buoyancy
-How a solar panel produces electricity
-Why popcorn kernels pop
-How bats navigate in darkness
-Why salt lowers the freezing point of water
-How a jet engine creates thrust
-Why a day on Venus is longer than its year
-How a GPS receiver estimates location
-What causes an eclipse of the Sun
-Why pressure increases with ocean depth
-Why ocean water is salty
-How magnetism drives an electric motor
-
-# Automated visual-asset integration test marker (ignored by selector)
-
-# Relevance-filter integration test marker (ignored)
-
-# One-time cinematic production test (comment ignored)
-
-# Third visual preview trigger (ignored)
-
-# Photo-only integration check; ignored by topic chooser
-
-# Authentic-photo coverage test v2 (ignored)
+# Visually demonstrable science topics for REAL photography only.
+# Topics requiring diagrams or impossible visual recreations are excluded.
+Why lightning strikes during thunderstorms
+How a rainbow forms after rain
+Why the sky turns red at sunset
+What causes the northern lights
+How volcanoes produce lava fountains
+Why ocean waves break near beaches
+How clouds form before rain
+Why snowflakes have sixfold symmetry
+How glaciers carve mountain valleys
+Why fog forms above lakes
+How hailstones form during storms
+How a solar eclipse happens
+Why the Moon appears different shapes
+Why desert sand dunes move
+How waterfalls shape rocky canyons
+Why some lakes turn pink
+How coral reefs grow underwater
+Why leaves change color in autumn
+How bees carry pollen between flowers
+How hummingbirds hover beside flowers
+Why penguins huddle in Antarctica
+How dolphins travel in pods
+Why flamingos stand on one leg
+How mushrooms release spores
+Why stars appear bright in dark skies
+How lightning illuminates storm clouds
+How geysers shoot hot water into the air
+Why icebergs float in the ocean
+How rain makes droplets on plant leaves
+Why volcanoes create ash clouds
