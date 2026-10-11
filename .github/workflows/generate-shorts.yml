@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       topic:
-        description: Optional science topic (leave blank to rotate topic list)
+        description: Optional science topic (leave blank for automatic rotation)
         required: false
         type: string
-  # Enable only after the first manual generation succeeds:
+  # After reviewing multiple successful videos, optionally enable daily previews:
   # schedule:
   #   - cron: '23 7 * * *'
 
@@ -21,9 +21,8 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       LLM_PROVIDER: gemini
       LLM_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
       SCRIPT_REVIEW: rewrite
@@ -38,16 +37,15 @@ jobs:
       CAPTION_STYLE: clean
       VISUAL_SOURCES: local
       MEDIA_DIR: media
+      CHANNEL_NAME: Faceless Science
+      WATERMARK: none
+      END_CTA: What surprised you most?
       WORKERS: '1'
       UPLOAD: 'false'
       YT_PRIVACY: private
       KEEP_VIDEOS: 'true'
       YT_TOKEN_FILE: token.json
       YT_DAILY_LIMIT: '1'
-      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-      YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-      PRIVATE_UPLOAD_ENABLED: ${{ vars.PRIVATE_UPLOAD_ENABLED || 'false' }}
-      MANUAL_TOPIC: ${{ inputs.topic || '' }}
       PYTHONUTF8: '1'
 
     steps:
@@ -59,14 +57,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Check required Gemini secret
-        shell: bash
-        run: |
-          if [[ -z "$GEMINI_API_KEY" ]]; then
-            echo 'Missing GEMINI_API_KEY. Add a repository Actions secret first.'
-            exit 1
-          fi
-
       - name: Install FFmpeg, Kokoro and pinned PurffleShorts
         shell: bash
         run: |
@@ -77,46 +67,56 @@ jobs:
           git -C engine checkout --detach bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8
           python -m pip install -e './engine[kokoro]'
 
-      - name: Generate original draft and render video
+      - name: Prepare script and scene-specific licensed images
+        working-directory: engine
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MANUAL_TOPIC: ${{ inputs.topic || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$GEMINI_API_KEY" ]]; then
+            echo 'Missing GEMINI_API_KEY in Settings → Secrets and variables → Actions'
+            exit 1
+          fi
+          TOPIC="$(python ../scripts/select_topic.py ../topics.txt)"
+          echo "Topic: $TOPIC"
+          python ../scripts/prepare_content.py "$TOPIC"
+
+      - name: Render reviewed-script draft
         working-directory: engine
         shell: bash
         run: |
           set -euo pipefail
-          TOPIC="$(python ../scripts/select_topic.py ../topics.txt)"
-          echo "Topic: $TOPIC"
+          python -m purffle_shorts make --script prepared/script.json --no-upload
 
-          if [[ -n "$PIXABAY_API_KEY" ]]; then
-            export VISUAL_SOURCES='pixabay,local'
+      - name: Gate video, media licences, and technical quality
+        working-directory: engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ../scripts/quality_check.py
+
+      # This step runs ONLY if video quality checks pass and the owner explicitly
+      # enables private uploads. No public video is ever published here.
+      - name: Optional upload as PRIVATE to YouTube
+        if: ${{ vars.PRIVATE_UPLOAD_ENABLED == 'true' }}
+        working-directory: engine
+        shell: bash
+        env:
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$YOUTUBE_TOKEN_JSON" ]]; then
+            echo 'PRIVATE_UPLOAD_ENABLED=true but YOUTUBE_TOKEN_JSON is missing'
+            exit 1
           fi
+          umask 077
+          printf '%s' "$YOUTUBE_TOKEN_JSON" > token.json
+          export YT_PRIVACY=private
+          python -m purffle_shorts upload --pending
 
-          if [[ "$PRIVATE_UPLOAD_ENABLED" == 'true' ]]; then
-            if [[ -z "$YOUTUBE_TOKEN_JSON" ]]; then
-              echo 'Private upload enabled but YOUTUBE_TOKEN_JSON secret missing' >&2
-              exit 1
-            fi
-            printf '%s' "$YOUTUBE_TOKEN_JSON" > token.json
-            chmod 600 token.json
-            python - <<'PY_AUTH'
-          from google.oauth2.credentials import Credentials
-          from google.auth.transport.requests import Request
-          creds = Credentials.from_authorized_user_file("token.json")
-          if not creds.refresh_token:
-              raise SystemExit("YouTube token has no refresh_token")
-          if not creds.valid:
-              creds.refresh(Request())
-          if not creds.valid:
-              raise SystemExit("YouTube OAuth token expired or invalid")
-          with open("token.json", "w", encoding="utf-8") as f:
-              f.write(creds.to_json())
-          PY_AUTH
-            export UPLOAD='true'
-            export YT_PRIVACY='private'
-            python -m purffle_shorts make --topic "$TOPIC" --privacy private
-          else
-            python -m purffle_shorts make --topic "$TOPIC" --no-upload
-          fi
-
-      - name: Save preview files for manual review
+      - name: Save script, video, sources and QA report for human review
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -127,6 +127,9 @@ jobs:
             engine/output_videos/**/captions.srt
             engine/output_videos/**/script.json
             engine/output_videos/**/cover.jpg
+            engine/prepared/script.json
+            engine/prepared/visual_manifest.json
+            engine/prepared/quality_report.json
           if-no-files-found: warn
           retention-days: 3
           compression-level: 0
