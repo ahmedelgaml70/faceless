@@ -105,10 +105,13 @@ def compile_video(root: Path):
     temp=folder/"motion_finish.mp4"
     # Track 0 is genuine B-roll, track 1 is only the Kokoro voice (stock audio muted).
     # FFmpeg/libass renders text subtitles, not diagrams or generated illustrations.
+    # libass maps style values from its virtual PlayResY to output pixels.
+    # Prior FontSize=30, MarginV=180 inadvertently produced giant top captions.
+    # These smaller values place natural-size captions in the lower-safe area.
     subtitles_filter=(
         "subtitles="+str(subtitle_file.relative_to(root)).replace("\\","/")+
-        ":force_style='FontName=DejaVu Sans,FontSize=30,Alignment=2,"
-        "MarginV=180,Outline=3,Shadow=1,BorderStyle=1,"
+        ":force_style='FontName=DejaVu Sans,FontSize=12,Alignment=2,"
+        "MarginV=44,Outline=1,Shadow=1,BorderStyle=1,"
         "PrimaryColour=&H00FFFFFF'"
     )
     try:
