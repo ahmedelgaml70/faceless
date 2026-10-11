@@ -8,6 +8,7 @@ rights-compatible photographs, the workflow fails closed before rendering.
 from __future__ import annotations
 
 from collections import Counter
+import base64
 from html.parser import HTMLParser
 from io import BytesIO
 import html
@@ -40,6 +41,8 @@ BAD_TITLE = ("logo", "trademark", "flag of", "icon of", "sounders", "football",
              "map of", "ai-generated", "midjourney", "stable diffusion", "dall-e",
              "synthetic image", "meme", "poster", "graphic design", "infographic",
              "artwork", ".svg", " in 3d", "3-d", "3d model", "simulation",
+             "advertisement", "six flags", "roller coaster", "theme park",
+             "follow button", "subscribe button", "heat island", "infrared map",
              "computer generated", "cgi ", "model of", "visualization", "visualisation")
 STOP = {"that","from","with","into","near","over","under","this","those",
         "some","there","their","close","photo","stock","image","video",
@@ -152,8 +155,73 @@ def topic_query(topic: str) -> str:
     return " ".join(topic.split()[:4])
 
 
-def choose_photo(query: str, topic: str, used: Counter,
-                 memo: dict[str,list[dict]]) -> tuple[Image.Image, dict, str]:
+class VisionReview:
+    """Uses the existing Gemini API to inspect actual photographs.
+
+    File names and search terms cannot prove that images depict a scene.
+    This reviewer rejects uncertainty and prevents graphical fallbacks.
+    """
+
+    def __init__(self):
+        self.key=os.environ.get("GEMINI_API_KEY","")
+        self.model=os.environ.get("GEMINI_VISION_MODEL",os.environ.get("LLM_MODEL","gemini-3.5-flash-lite"))
+        self.calls=0
+        self.last=0.0
+        self.maximum=16
+        if not self.key:
+            raise RuntimeError("GEMINI_API_KEY required for visual verification")
+
+    def evaluate(self, photo: Image.Image, query: str, narration: str, title: str) -> dict:
+        if self.calls>=self.maximum:
+            raise RuntimeError("Gemini image-review budget reached; refusing unchecked photos")
+        elapsed=time.monotonic()-self.last
+        if self.calls>0 and elapsed<5.0:
+            time.sleep(5.0-elapsed)
+        compact=photo.copy()
+        compact.thumbnail((560,560))
+        buffer=BytesIO()
+        compact.save(buffer,format="JPEG",quality=73)
+        prompt=(
+            "You are an exceptionally strict stock-photo editor. Evaluate THE IMAGE PIXELS "
+            "rather than trusting filenames. Is it a true camera, telescope, or satellite "
+            "photograph rather than advertising, screenshots, graphics, 3D illustrations, "
+            "computer generated art, false-color heatmaps, cartoons, theme parks, "
+            "social media buttons or infographics? Does it clearly and directly "
+            "depict a subject relevant to the following spoken SCIENCE sentence? "
+            "Do NOT approve roller coasters called Shockwave for shockwave physics, "
+            "hotel advertisements titled hot for lightning heat, stock 'follow buttons', "
+            "or totally unrelated visual metaphors. If uncertain, reject. "
+            f"Spoken sentence: {narration[:480]!r}. "
+            f"Photo request: {query[:110]!r}. File title: {title[:125]!r}. "
+            'Reply only JSON {"approve":true or false,"depicts":"what is visible",'
+            '"reason":"specific visual suitability rationale"}. Approve only truly suitable real photography.'
+        )
+        body={"contents":[{"role":"user","parts":[
+                {"text":prompt},
+                {"inline_data":{"mime_type":"image/jpeg",
+                                "data":base64.b64encode(buffer.getvalue()).decode("ascii")}}
+             ]}],
+             "generationConfig":{"responseMimeType":"application/json","temperature":0}}
+        url=f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        self.calls+=1
+        self.last=time.monotonic()
+        response=requests.post(url,json=body,headers={"x-goog-api-key":self.key},timeout=45)
+        if response.status_code==429:
+            raise RuntimeError("Gemini visual-check quota reached; stopping safely")
+        response.raise_for_status()
+        data=response.json()
+        try:
+            raw="".join(x.get("text","") for x in data["candidates"][0]["content"]["parts"])
+            obj=json.loads(raw.strip().strip(chr(96)).removeprefix("json").strip())
+            return {"approve":obj.get("approve") is True,
+                    "depicts":str(obj.get("depicts",""))[:180],
+                    "reason":str(obj.get("reason",""))[:180]}
+        except (ValueError,KeyError,IndexError,TypeError) as exc:
+            raise RuntimeError("Gemini cannot verify image relevance; rejecting photo") from exc
+
+
+def choose_photo(query: str, topic: str, narration: str, used: Counter,
+                 memo: dict[str,list[dict]], checker: VisionReview) -> tuple[Image.Image, dict, str]:
     simplified=" ".join(query.split()[:2])
     broad=topic_query(topic)
     # When Wikimedia has no exact multiword file, try concrete subject words.
@@ -198,8 +266,13 @@ def choose_photo(query: str, topic: str, used: Counter,
             except (requests.RequestException,ValueError,UnidentifiedImageError,OSError) as exc:
                 LOG.warning("Commons image rejected %s: %s",src["title"][:70],str(exc)[:90])
                 continue
+            review=checker.evaluate(photo,query,narration,src["title"])
+            if not review["approve"]:
+                LOG.info("VISION REJECTED: %s — %s",src["title"][:65],review["reason"][:110])
+                continue
             used[src["page"]]+=1
-            src=dict(src, title_overlap_terms=overlap)
+            src=dict(src,title_overlap_terms=overlap,vision_approved=True,
+                     vision_subject=review["depicts"],vision_explanation=review["reason"])
             direct_phrases={query,simplified,*keywords,*expanded}
             return photo,src,"direct" if phrase in direct_phrases else "topic-broll"
     raise RuntimeError(f"No licensed REAL photo for scene query {query!r}. "
@@ -241,10 +314,11 @@ def prepare(topic: str) -> None:
     manifest=[]
     used=Counter()
     memo={}
+    checker=VisionReview()
     credits=[]
     for i,scene in enumerate(script.scenes):
         query=scene.search_query.strip()
-        photo,source,match=choose_photo(query,topic,used,memo)
+        photo,source,match=choose_photo(query,topic,scene.narration,used,memo,checker)
         token=f"facelessscene{chr(ord('a')+i)}"
         filename=MEDIA / f"{token}_photo.jpg"
         full_frame_photo(photo).save(filename,quality=91,optimize=True,subsampling=0)
@@ -268,7 +342,7 @@ def prepare(topic: str) -> None:
         "topic":topic,"visual_policy":"licensed-real-photography-only",
         "unique_photos":distinct,"scenes":manifest
     },indent=2,ensure_ascii=False),encoding="utf-8")
-    print(f"PREPARED {len(manifest)} scenes with {distinct} unique REAL licensed photographs",flush=True)
+    print(f"PREPARED {len(manifest)} scenes with {distinct} unique REAL licensed photographs; Gemini reviewed {checker.calls} candidate images",flush=True)
 
 
 if __name__=="__main__":
