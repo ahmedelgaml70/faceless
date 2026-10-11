@@ -1,10 +1,10 @@
 # Faceless Science — Gemini Shorts automation
 
-**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 3 adds licensed visual sourcing, original diagrams, scene-matching checks, a cinematic motion-graphics renderer, and fail-closed video QA. **The cinematic version is still being evaluated.**
+**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 4 removes ALL drawn diagrams, SVG/vector artwork, programmed animations and fake visual replacements. It uses real Wikimedia Commons photographs only, modest camera moves and text-only captions. Videos fail closed when enough relevant licensed photos cannot be found. **Version 4 still needs its first full render test.**
 
 ## Zero paid software, no local LLM
 
-Pipeline: GitHub Actions → Gemini script + second-pass editorial review → Wikimedia Commons photo selection (Public Domain, CC0, and CC BY 2/3/4 only) → otherwise locally rendered original diagrams → Kokoro narration → FFmpeg initial render → **cinematic post-production (parallax, animated scientific graphics, kinetic captions in lower third)** → independent technical/licence-metadata QA → GitHub artifact.
+Pipeline: GitHub Actions → Gemini script + editorial rewrite → licensed Wikimedia Commons **photographs** → Kokoro narration → PurffleShorts audio base → photographic re-edit (gentle pan and zoom + text-only captions) → photo-only quality gate → downloadable preview.
 
 No Ollama, paid video platform, cloud hosting subscription, or Mac computer required. Standard hosted GitHub runners for **public repositories** are free under GitHub Actions terms. Confirm your Gemini account is on an eligible **Free** tier, and keep spending caps at $0. Free software does not mean guaranteed YouTube earnings.
 
@@ -15,7 +15,7 @@ No Ollama, paid video platform, cloud hosting subscription, or Mac computer requ
 3. After completion, download **shorts-preview-N** from the run's Artifacts section. It includes the MP4, script, scene licensing manifest, visual style report, attribution in the description metadata, and the QA report.
 4. Check video, audio, visual suitability, citations, factual claims and originality before publication. **A passing automatic check does not constitute human/editorial approval.**
 
-If Commons is inaccessible or produces fewer than **2 usable licensed visuals** for the topic, the workflow will **fail closed**, saving diagnostics rather than uploading a generic all-gradient video. Change the topic and run again; do not treat an automatic video as cleared for publication.
+If Commons is inaccessible or produces fewer than **3 distinct suitable licensed photographs** and at least 2 directly matched scenes, the workflow will **fail closed** and never upload a fallback drawing. Change the topic and run again; do not treat an automatic video as cleared for publication.
 
 ### Automatic daily generation
 
@@ -23,7 +23,7 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 
 ### Default visuals and licenses
 
-`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, it creates simple original labelled diagrams instead of stock images. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
+`scripts/prepare_content.py` uses Wikimedia's public MediaWiki API and downloads only metadata-identified Public Domain, CC0 or CC BY images. It excludes CC BY-SA, NC, ND, unknown and restricted licenses. It logs rights, author, and source page in `prepared/visual_manifest.json`. CC BY attribution is also added to the YouTube description. For unmatched scenes, the job fails rather than generating any illustration, SVG, diagram or misleading stock footage. Any claimed license and reuse eligibility should still be confirmed manually at the source page because Commons metadata is not a legal guarantee.
 
 ### QA
 
@@ -47,7 +47,7 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 - `.github/workflows/validate.yml`: lightweight syntax and topic-rotation check
 - `scripts/select_topic.py`: rotation of pre-selected factual topics
 - `scripts/prepare_content.py`: Gemini + Wikimedia + custom diagram assets
-- `scripts/cinematic_post.py`: animated graphics, parallax and lower-third timed captions
+- `scripts/cinematic_post.py`: **no drawn graphics**; real-photo camera movement and text-only captions
 - `scripts/quality_check.py`: fail-closed post-render gate
 - `topics.txt`: topic bank
 
