@@ -67,7 +67,7 @@ jobs:
           git -C engine checkout --detach bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8
           python -m pip install -e './engine[kokoro]'
 
-      - name: Prepare script and scene-specific licensed images
+      - name: Write script and source ONLY real licensed photographs
         working-directory: engine
         shell: bash
         env:
@@ -90,14 +90,14 @@ jobs:
           set -euo pipefail
           python -m purffle_shorts make --script prepared/script.json --no-upload
 
-      - name: Re-edit with cinematic motion graphics and lower-third captions
+      - name: Finish documentary with authentic photo motion and text-only captions
         working-directory: engine
         shell: bash
         run: |
           set -euo pipefail
           python ../scripts/cinematic_post.py
 
-      - name: Gate video, media licences, and technical quality
+      - name: Reject SVGs, drawings, weak matches and technical failures
         working-directory: engine
         shell: bash
         run: |
