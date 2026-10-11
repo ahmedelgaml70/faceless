@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m purffle_shorts make --script prepared/script.json --no-upload
-      - name: Replace all static imagery with actual real footage
+      - name: Reframe live footage cleanly and add compact lower-third captions
         working-directory: engine
         run: |
           set -euo pipefail
