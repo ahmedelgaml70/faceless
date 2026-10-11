@@ -32,3 +32,5 @@ How rain makes droplets on plant leaves
 Why volcanoes create ash clouds
 
 # Photo-vision filter regression test trigger (ignored)
+
+# Visual-first Gemini script integration test (ignored)
