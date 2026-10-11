@@ -18,6 +18,10 @@ def check() -> None:
     failed=[]
     if manifest.get("visual_policy")!="licensed-real-photography-only":
         failed.append("Visual policy must require real photography")
+    if manifest.get("storyboard_grounded") is not True:
+        failed.append("Script must be grounded to preverified photographic storyboard")
+    if manifest.get("scene_order_verified") is not True:
+        failed.append("Scene ordering has not been verified")
     if len(scenes)!=len(script.get("scenes",[])):
         failed.append("Photo count must equal script scene count")
     sources=Counter()
