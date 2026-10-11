@@ -42,3 +42,5 @@ How magnetism drives an electric motor
 # Automated visual-asset integration test marker (ignored by selector)
 
 # Relevance-filter integration test marker (ignored)
+
+# One-time cinematic production test (comment ignored)
