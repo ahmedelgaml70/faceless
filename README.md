@@ -47,3 +47,22 @@ For YouTube OAuth authorization, use a properly configured Google Cloud YouTube 
 - `.github/workflows/validate.yml` — source-compilation and topic checks
 
 Next milestone: inspect a successfully generated photo-grounded visual-first documentary, then source more authentic *moving camera footage* when rights-compatible clips are available. The pipeline is not a guarantee of YouTube monetization or a $3,000/month income.
+
+## Experimental real moving-footage pipeline — V6
+
+The photo slideshow is not good enough. A separate workflow now experiments with REAL camera footage:
+
+- [Run Real Motion Footage Preview](https://github.com/ahmedelgaml70/faceless/actions/workflows/motion-preview.yml).
+- scripts/prepare_motion.py searches licensed *video clips* (Wikimedia Commons by default and Pexels optionally), then uses Gemini to inspect real frames **before writing** a matching narration.
+- scripts/edit_motion.py uses actual camera motion and hard footage cuts, keeps Kokoro narration, and overlays simple text subtitles.
+- scripts/quality_motion.py rejects frozen footage, missing source credits, low-quality video, and missing narration.
+- No SVG, artificial animation, diagrams, or fallback photo slideshows are permitted in this workflow.
+- This is experimental, not the production default until the output has passed both the full run and a human visual review.
+
+### Free source choices
+
+Without another key, Wikimedia Commons provides a limited catalog of free video clips. A run may fail if it cannot find four genuinely suitable real moving clips. The source check permits Public Domain, CC0 and certain CC BY video files, excluding unknown, ShareAlike and noncommercial licensing metadata.
+
+**Optional: Free Pexels video API.** Pexels provides a free API for actual stock videos. To enable broader stock coverage, obtain a Pexels API key at https://www.pexels.com/api/ and store it in GitHub repository Secrets as PEXELS_API_KEY. Do not share the key in chat or commit it. The workflow includes a prominent Pexels link and contributor credits in metadata. See Pexels license and API attribution requirements.
+
+This experimental workflow does **not** upload to YouTube, even if upload-related variables exist. GitHub Actions usage and Gemini image inspection remain subject to their free-tier limits, while content quality and YouTube monetization are never guaranteed.
