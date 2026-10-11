@@ -22,7 +22,7 @@ import time
 from urllib.parse import urlparse
 
 import requests
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageFilter, ImageEnhance, UnidentifiedImageError
 
 from purffle_shorts.config import Settings
 from purffle_shorts.llm import LLM
@@ -285,9 +285,23 @@ def choose_photo(query: str, topic: str, narration: str, used: Counter,
 
 
 def full_frame_photo(photo: Image.Image) -> Image.Image:
-    """Actual photograph, minimally cropped; no frames, vectors, or labels."""
-    return ImageOps.fit(photo,(720,1280),Image.Resampling.LANCZOS,
-                        centering=(.5,.45))
+    """Keep full landscape subjects sharp rather than cropping away their arc.
+
+    Wide images appear complete over a soft duplicate of that same photo.
+    Neither synthetic artwork nor vector graphics are used.
+    """
+    photo=ImageOps.exif_transpose(photo).convert("RGB")
+    if photo.width / max(1, photo.height) < 0.95:
+        return ImageOps.fit(photo,(720,1280),Image.Resampling.LANCZOS,
+                            centering=(.5,.45))
+    background=ImageOps.fit(photo,(720,1280),Image.Resampling.LANCZOS)
+    background=background.filter(ImageFilter.GaussianBlur(32))
+    background=ImageEnhance.Brightness(background).enhance(0.50)
+    foreground=ImageOps.contain(photo,(720,975),Image.Resampling.LANCZOS)
+    x=(720-foreground.width)//2
+    y=min(450,max(180,(950-foreground.height)//2))
+    background.paste(foreground,(x,y))
+    return background
 
 
 def prepare(topic: str) -> None:
