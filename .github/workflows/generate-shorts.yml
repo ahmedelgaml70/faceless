@@ -1,9 +1,6 @@
 name: Generate Gemini Short
 
 on:
-  push:
-    paths:
-      - 'topics.txt'
   workflow_dispatch:
     inputs:
       topic:
