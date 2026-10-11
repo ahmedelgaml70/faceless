@@ -40,3 +40,5 @@ Why ocean water is salty
 How magnetism drives an electric motor
 
 # Automated visual-asset integration test marker (ignored by selector)
+
+# Relevance-filter integration test marker (ignored)
