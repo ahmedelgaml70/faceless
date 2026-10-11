@@ -90,6 +90,13 @@ jobs:
           set -euo pipefail
           python -m purffle_shorts make --script prepared/script.json --no-upload
 
+      - name: Re-edit with cinematic motion graphics and lower-third captions
+        working-directory: engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ../scripts/cinematic_post.py
+
       - name: Gate video, media licences, and technical quality
         working-directory: engine
         shell: bash
@@ -130,6 +137,7 @@ jobs:
             engine/prepared/script.json
             engine/prepared/visual_manifest.json
             engine/prepared/quality_report.json
+            engine/prepared/cinematic_report.json
           if-no-files-found: warn
           retention-days: 3
           compression-level: 0
