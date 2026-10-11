@@ -1,0 +1,96 @@
+name: Real Motion Footage Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: Filmable science topic (waterfalls, ocean waves, bees, volcanoes)
+        type: string
+        required: false
+        default: "How waterfalls shape rocky canyons"
+  push:
+    paths:
+      - '.github/workflows/motion-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-motion-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      LLM_PROVIDER: gemini
+      LLM_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+      TARGET_SECONDS: "35"
+      SCRIPT_REVIEW: rewrite
+      SCRIPT_STYLE: explainer
+      TTS_ENGINE: kokoro
+      VIDEO_ENCODER: libx264
+      RESOLUTION: 720x1280
+      FPS: "24"
+      VISUAL_SOURCES: local
+      MEDIA_DIR: media
+      CHANNEL_NAME: Faceless Science
+      WATERMARK: none
+      UPLOAD: "false"
+      YT_PRIVACY: private
+      KEEP_VIDEOS: "true"
+      PYTHONUTF8: "1"
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install FFmpeg and Kokoro renderer
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg espeak-ng
+          git clone https://github.com/Chamanrajragu/purffle-shorts.git engine
+          git -C engine checkout --detach bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8
+          python -m pip install -e './engine[kokoro]'
+      - name: Source and verify ACTUAL moving documentary clips
+        working-directory: engine
+        env:
+          REQUESTED_TOPIC: ${{ inputs.topic || 'How waterfalls shape rocky canyons' }}
+        run: |
+          set -euo pipefail
+          test -n "$GEMINI_API_KEY" || { echo 'Missing GEMINI_API_KEY secret'; exit 1; }
+          python ../scripts/prepare_motion.py "$REQUESTED_TOPIC"
+      - name: Render professional narration and timing
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          python -m purffle_shorts make --script prepared/script.json --no-upload
+      - name: Replace all static imagery with actual real footage
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          python ../scripts/edit_motion.py
+      - name: Validate all shots are moving, licensed and narration-matched
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          python ../scripts/quality_motion.py
+      - name: Save preview and licensing reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-motion-preview-${{ github.run_number }}
+          path: |
+            engine/output_videos/**/*.mp4
+            engine/output_videos/**/metadata.json
+            engine/output_videos/**/captions.srt
+            engine/prepared/*.json
+            engine/media/*_real_frame.jpg
+          if-no-files-found: warn
+          retention-days: 4
+          compression-level: 0
