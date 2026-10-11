@@ -75,6 +75,28 @@ class Shot:
     hash64: int
 
 
+SCIENCE_REFERENCE = {
+    "rainbow": (
+        "https://www.weather.gov/fgz/Rainbow",
+        "Verified NOAA facts: sunlight bends by refraction as it enters a "
+        "water droplet, reflects once inside for the primary rainbow, and "
+        "refracts again as it exits. Different wavelengths refract at "
+        "slightly different angles, so a rainbow appears in colored bands. "
+        "Many droplets contribute light to the observer; a primary rainbow "
+        "is centered opposite the Sun. A rainbow can form a full circle "
+        "but viewers on the ground usually see only an arc. "
+        "Do NOT say reflection itself creates or splits the colors."
+    )
+}
+
+
+def reference_for(topic: str) -> tuple[str, str]:
+    for key, value in SCIENCE_REFERENCE.items():
+        if key in topic.casefold():
+            return value
+    return "", ""
+
+
 def subject_search(topic: str) -> tuple[str, list[str]]:
     lower=topic.casefold()
     for trigger, queries in PHOTO_TOPICS:
@@ -187,6 +209,7 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
         f"Filename: {shot.source['title']!r}."
         for idx,shot in enumerate(shots)
     )
+    reference_url, facts = reference_for(topic)
     system=(
         "You are a scientifically careful documentary producer writing an authentic 35-second "
         "vertical video for an audience that wants to understand the real world. "
@@ -199,7 +222,11 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
     prompt=(
         f"Topic: {topic}\n\nVerified visual storyboard (fixed order):\n{shots_description}\n\n"
         f"Rules: EXACTLY {len(shots)} scenes in EXACTLY the listed order. "
-        "First line must hook immediately without a question like 'did you know'. "
+        "Open with one arresting, VERIFIED scientific insight that makes a viewer curious "
+        "within the first two seconds. Do not begin with weather-setting filler such as "
+        "'As the clouds...', 'When it rains...', 'After the storm...', 'Imagine...', "
+        "'Did you know', or generic introductions. "
+        "Explain WHY the phenomenon works in concrete spoken language. "
         "One connected coherent scientific explanation, not a list of random photo descriptions. "
         "Write approximately 75-110 total narrated words, using only the fixed images. "
         "Each narration should be 10-21 natural spoken words. "
@@ -211,12 +238,36 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
         "Narrative sequence: hook, context, simple scientific explanation, practical implication, satisfying payoff; adapt gracefully to actual scene count. "
         "Title should be accurate, specific, and shorter than 55 characters. "
         "Description should summarize the true science and invite a relevant viewer question. "
+        + (f"\nFACTUAL REFERENCE (rely on these facts, do not invent contradictions): {facts}\n" if facts else "")
         'JSON fields: "topic", "title", "hook_text", "cast", "scenes" '
         '(array of {"speaker":"A","narration","search_query","image_prompt"}), '
         '"description","hashtags","tags","category". Category science.'
     )
     data=llm.complete_json(system,prompt,SCRIPT_SCHEMA,max_tokens=4500)
     script=normalize(data,topic,"explainer","en")
+    bad_hook = re.match(
+        r"(?i)^(as\\s|when\\s|after\\s|imagine\\s|did you know|have you ever|in this video)",
+        script.scenes[0].narration.strip()
+    )
+    if bad_hook:
+        LOG.info("Rewriting generic opening: %s", script.scenes[0].narration[:100])
+        repair_prompt = prompt + (
+            "\n\nYour first attempt opened with generic scene-setting: "
+            + repr(script.scenes[0].narration) +
+            ". Rewrite the ENTIRE JSON script, preserving the fixed image order, "
+            "but make the first words a surprising, scientifically sound claim. "
+            "Do not use a generic question, an introductory dependent clause, "
+            "or a claim outside the reference facts."
+        )
+        revised=llm.complete_json(system,repair_prompt,SCRIPT_SCHEMA,max_tokens=4500)
+        candidate=normalize(revised,topic,"explainer","en")
+        if len(candidate.scenes)==len(shots) and not re.match(
+            r"(?i)^(as\\s|when\\s|after\\s|imagine\\s|did you know|have you ever|in this video)",
+            candidate.scenes[0].narration.strip()
+        ):
+            script=candidate
+        else:
+            raise RuntimeError("Script hook remains generic; refusing low-quality narration")
     if len(script.scenes)!=len(shots):
         raise RuntimeError("Gemini changed the approved storyboard scene count: rejected")
     nwords=len(script.narration.split())
@@ -253,12 +304,15 @@ def run(topic: str) -> None:
                 credits.append(attribution)
     if credits:
         script.description+="\n\nPhoto credits:\n"+"\n".join(credits)
+    reference_url, _facts = reference_for(topic)
+    if reference_url:
+        script.description+="\n\nScience reference: "+reference_url
     (PREPARED/"script.json").write_text(
         json.dumps(script.to_dict(),indent=2,ensure_ascii=False),encoding="utf-8")
     (PREPARED/"visual_manifest.json").write_text(
         json.dumps({"topic":topic,"visual_policy":"licensed-real-photography-only",
                     "unique_photos":len(shots),"storyboard_grounded":True,
-                    "scene_order_verified":True,"scenes":entries},indent=2,ensure_ascii=False),
+                    "scene_order_verified":True,"science_reference":reference_url,"scenes":entries},indent=2,ensure_ascii=False),
         encoding="utf-8"
     )
     print(f"READY: {len(shots)} Gemini-verified real photos, script grounded to each photo, "
