@@ -26,6 +26,8 @@ def check() -> None:
         if scene.get("kind")!="wikimedia-photo":
             failed.append(f"Scene {scene.get('index')} uses non-photo or generated asset")
         source=scene.get("source",{})
+        if source.get("vision_approved") is not True:
+            failed.append("Photograph was not visually verified against its narration")
         page=source.get("page","")
         if not page.startswith("https://commons.wikimedia.org/"):
             failed.append("Photo missing trusted Commons attribution page")
