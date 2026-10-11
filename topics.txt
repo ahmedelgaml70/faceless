@@ -44,3 +44,5 @@ How magnetism drives an electric motor
 # Relevance-filter integration test marker (ignored)
 
 # One-time cinematic production test (comment ignored)
+
+# Third visual preview trigger (ignored)
