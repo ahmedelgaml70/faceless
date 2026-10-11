@@ -34,3 +34,5 @@ Why volcanoes create ash clouds
 # Photo-vision filter regression test trigger (ignored)
 
 # Visual-first Gemini script integration test (ignored)
+
+# Flexible real-photo storyboard test (ignored)
