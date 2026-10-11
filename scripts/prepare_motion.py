@@ -109,7 +109,7 @@ def pexels_sources(phrase: str) -> list[dict]:
         return []
     payload=json_request(
         "https://api.pexels.com/v1/videos/search",
-        {"query":phrase,"per_page":20,"size":"small"},
+        {"query":phrase,"per_page":24,"size":"small","orientation":"portrait"},
         {"Authorization":key,"User-Agent":HEADERS["User-Agent"]}
     )
     out=[]
