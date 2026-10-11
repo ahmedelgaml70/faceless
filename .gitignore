@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+**/token.json
+**/credentials.json
+__pycache__/
+*.pyc
+.venv/
+output_videos/
+engine/
+data/
