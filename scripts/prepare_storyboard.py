@@ -32,12 +32,13 @@ from prepare_content import (
 )
 
 LOG = logging.getLogger("faceless.storyboard")
-SCENE_COUNT = 6
-MAX_IMAGE_REVIEWS = 15
+SCENE_TARGET = 6
+MIN_SCENES = 4
+MAX_IMAGE_REVIEWS = 20
 # These search terms specify physical subjects with widely documented real photos.
 # Avoid impossible "lightning air expands at 30,000 C" or microscopic CGI.
 PHOTO_TOPICS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("rainbow", ("rainbow landscape", "rainbow sky", "double rainbow", "rainbow after rain")),
+    ("rainbow", ("rainbow landscape", "rainbow sky", "double rainbow", "rainbow after rain", "rainbow", "rainbow mountains", "rainbow over field", "rainbow lake", "rainbow clouds")),
     ("lightning", ("lightning strike", "lightning storm", "lightning sky", "thunderstorm lightning")),
     ("volcano", ("volcano eruption", "lava flow", "volcano crater", "volcano ash cloud")),
     ("aurora", ("northern lights aurora", "aurora borealis", "aurora night sky")),
@@ -130,7 +131,7 @@ def choose_shots(topic: str, settings: Settings) -> tuple[list[Shot], dict]:
     pool.sort(key=lambda entry:(-entry[0],len(entry[1].get("title",""))))
     LOG.info("Commons candidates: %d for %s",len(pool),subject)
     for overlap, source,phrase in pool:
-        if len(shots)>=SCENE_COUNT or checker.calls>=checker.maximum:
+        if len(shots)>=SCENE_TARGET or checker.calls>=checker.maximum:
             break
         try:
             img=get_photo(source)
@@ -157,7 +158,7 @@ def choose_shots(topic: str, settings: Settings) -> tuple[list[Shot], dict]:
                         vision_explanation=review["reason"])
             shots.append(Shot(source, img, review["depicts"], h))
             LOG.info("VERIFIED PHOTO %d/%d: %s, depicts %s",
-                     len(shots),SCENE_COUNT,source["title"][:65],review["depicts"][:100])
+                     len(shots),SCENE_TARGET,source["title"][:65],review["depicts"][:100])
         except RuntimeError:
             raise  # quota errors must stop, never silently bypass checking
         except Exception as exc:
@@ -168,12 +169,14 @@ def choose_shots(topic: str, settings: Settings) -> tuple[list[Shot], dict]:
     audit["selected"]=len(shots)
     (PREPARED/"selection_report.json").write_text(
         json.dumps(audit,indent=2,ensure_ascii=False),encoding="utf-8")
-    if len(shots)!=SCENE_COUNT:
+    if len(shots)<MIN_SCENES:
         raise RuntimeError(
-            f"Only {len(shots)} of {SCENE_COUNT} authentic, distinct photos approved "
+            f"Only {len(shots)} of {MIN_SCENES} required authentic, distinct photos approved "
             f"within {checker.calls} Gemini vision calls. No generated-art fallback. "
             "Choose another photo-rich science topic."
         )
+    if len(shots)<SCENE_TARGET:
+        LOG.info("Using a concise %d-scene documentary rather than unrelated filler imagery",len(shots))
     return shots,audit
 
 
@@ -187,7 +190,7 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
     system=(
         "You are a scientifically careful documentary producer writing an authentic 35-second "
         "vertical video for an audience that wants to understand the real world. "
-        "You have exactly six REAL PHOTOGRAPHS, already selected and verified. "
+        "You have a fixed set of REAL PHOTOGRAPHS, already selected and verified. "
         "Write a naturally spoken script scene-by-scene matching THOSE ACTUAL PHOTOS IN ORDER. "
         "No invented claims, misleading image-to-claim matches, fake quotes or dramatic false facts. "
         "Don't pretend the photo shows something it does not. "
@@ -198,14 +201,14 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
         f"Rules: EXACTLY {len(shots)} scenes in EXACTLY the listed order. "
         "First line must hook immediately without a question like 'did you know'. "
         "One connected coherent scientific explanation, not a list of random photo descriptions. "
-        "Across six scenes write approximately 85-104 total narrated words. "
+        "Write approximately 75-110 total narrated words, using only the fixed images. "
         "Each narration should be 10-21 natural spoken words. "
         "Use correct measurements and clear comparisons if numerical facts are needed. "
         "No 'like and subscribe', no false emotional urgency, no misleading impossible visual. "
         "Last scene must deliver a satisfying conclusion, not filler. "
         "Each scene's search_query must describe what the associated photograph ACTUALLY shows, "
         "and image_prompt must also describe the verified image; no instructions to create artwork. "
-        "Six chronological story beats: hook, context, mechanism, mechanism, consequence, payoff. "
+        "Narrative sequence: hook, context, simple scientific explanation, practical implication, satisfying payoff; adapt gracefully to actual scene count. "
         "Title should be accurate, specific, and shorter than 55 characters. "
         "Description should summarize the true science and invite a relevant viewer question. "
         'JSON fields: "topic", "title", "hook_text", "cast", "scenes" '
@@ -217,12 +220,12 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
     if len(script.scenes)!=len(shots):
         raise RuntimeError("Gemini changed the approved storyboard scene count: rejected")
     nwords=len(script.narration.split())
-    if not 70<=nwords<=125:
-        raise RuntimeError(f"Gemini returned {nwords} words; require 70-125")
+    if not 60<=nwords<=125:
+        raise RuntimeError(f"Gemini returned {nwords} words; require 60-125")
     for idx,scene in enumerate(script.scenes):
         n=len(scene.narration.split())
-        if not 8<=n<=25:
-            raise RuntimeError(f"Scene {idx+1} has {n} words; require 8-25")
+        if not 8<=n<=29:
+            raise RuntimeError(f"Scene {idx+1} has {n} words; require 8-29")
     return script
 
 
