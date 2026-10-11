@@ -64,7 +64,7 @@ def check():
             b=still_from_clip(path,min(2.7,info["duration"]*.55))
             difference=ImageChops.difference(a.convert("RGB"),b.convert("RGB"))
             hist=difference.histogram()
-            movement=sum(value*count for value,count in enumerate(hist)) / max(1,sum(hist))
+            movement=sum((value%256)*count for value,count in enumerate(hist)) / max(1,sum(hist))
             if movement<0.20:
                 issues.append(f"Moving source appears frozen: {path}")
         except (subprocess.SubprocessError,ValueError,OSError) as exc:
