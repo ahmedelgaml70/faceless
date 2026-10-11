@@ -238,7 +238,7 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
         "Narrative sequence: hook, context, simple scientific explanation, practical implication, satisfying payoff; adapt gracefully to actual scene count. "
         "Title should be accurate, specific, and shorter than 55 characters. "
         "Description should summarize the true science and invite a relevant viewer question. "
-        + (f"\nFACTUAL REFERENCE (rely on these facts, do not invent contradictions): {facts}\n" if facts else "")
+        f"\nFACTUAL REFERENCE (rely on these facts, do not invent contradictions): {facts}\n"
         'JSON fields: "topic", "title", "hook_text", "cast", "scenes" '
         '(array of {"speaker":"A","narration","search_query","image_prompt"}), '
         '"description","hashtags","tags","category". Category science.'
@@ -246,7 +246,7 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
     data=llm.complete_json(system,prompt,SCRIPT_SCHEMA,max_tokens=4500)
     script=normalize(data,topic,"explainer","en")
     bad_hook = re.match(
-        r"(?i)^(as\\s|when\\s|after\\s|imagine\\s|did you know|have you ever|in this video)",
+        r"(?i)^(as\s|when\s|after\s|imagine\s|did you know|have you ever|in this video)",
         script.scenes[0].narration.strip()
     )
     if bad_hook:
@@ -262,7 +262,7 @@ def write_visual_script(topic: str, shots: list[Shot], settings: Settings):
         revised=llm.complete_json(system,repair_prompt,SCRIPT_SCHEMA,max_tokens=4500)
         candidate=normalize(revised,topic,"explainer","en")
         if len(candidate.scenes)==len(shots) and not re.match(
-            r"(?i)^(as\\s|when\\s|after\\s|imagine\\s|did you know|have you ever|in this video)",
+            r"(?i)^(as\s|when\s|after\s|imagine\s|did you know|have you ever|in this video)",
             candidate.scenes[0].narration.strip()
         ):
             script=candidate
