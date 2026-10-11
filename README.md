@@ -1,10 +1,10 @@
 # Faceless Science — Gemini Shorts automation
 
-**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 2 adds licensed visual sourcing, original diagrams, unique scene matching, clearer scripts, attribution, and a fail-closed quality gate. **The new version still needs its first live test.**
+**Status:** GitHub Actions can render a video with your Gemini API key (first run passed). Version 3 adds licensed visual sourcing, original diagrams, scene-matching checks, a cinematic motion-graphics renderer, and fail-closed video QA. **The cinematic version is still being evaluated.**
 
 ## Zero paid software, no local LLM
 
-Pipeline: GitHub Actions → Gemini script + second-pass editorial review → Wikimedia Commons photo selection (Public Domain, CC0, and CC BY 2/3/4 only) → otherwise locally rendered original diagrams → Kokoro narration → FFmpeg render → independent technical/licence-metadata QA → GitHub artifact.
+Pipeline: GitHub Actions → Gemini script + second-pass editorial review → Wikimedia Commons photo selection (Public Domain, CC0, and CC BY 2/3/4 only) → otherwise locally rendered original diagrams → Kokoro narration → FFmpeg initial render → **cinematic post-production (parallax, animated scientific graphics, kinetic captions in lower third)** → independent technical/licence-metadata QA → GitHub artifact.
 
 No Ollama, paid video platform, cloud hosting subscription, or Mac computer required. Standard hosted GitHub runners for **public repositories** are free under GitHub Actions terms. Confirm your Gemini account is on an eligible **Free** tier, and keep spending caps at $0. Free software does not mean guaranteed YouTube earnings.
 
@@ -12,7 +12,7 @@ No Ollama, paid video platform, cloud hosting subscription, or Mac computer requ
 
 1. In repository **Settings → Secrets and variables → Actions → Secrets**, save your Gemini key as **GEMINI_API_KEY**.
 2. Open **Actions → Generate Gemini Short → Run workflow**. Optionally supply a specific science topic.
-3. After completion, download **shorts-preview-N** from the run's Artifacts section. It includes the MP4, script, scene licensing manifest, attribution in the description metadata, and the QA report.
+3. After completion, download **shorts-preview-N** from the run's Artifacts section. It includes the MP4, script, scene licensing manifest, visual style report, attribution in the description metadata, and the QA report.
 4. Check video, audio, visual suitability, citations, factual claims and originality before publication. **A passing automatic check does not constitute human/editorial approval.**
 
 If Commons is inaccessible or produces fewer than **2 usable licensed visuals** for the topic, the workflow will **fail closed**, saving diagnostics rather than uploading a generic all-gradient video. Change the topic and run again; do not treat an automatic video as cleared for publication.
@@ -47,7 +47,8 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 - `.github/workflows/validate.yml`: lightweight syntax and topic-rotation check
 - `scripts/select_topic.py`: rotation of pre-selected factual topics
 - `scripts/prepare_content.py`: Gemini + Wikimedia + custom diagram assets
+- `scripts/cinematic_post.py`: animated graphics, parallax and lower-third timed captions
 - `scripts/quality_check.py`: fail-closed post-render gate
 - `topics.txt`: topic bank
 
-**Next milestone:** successfully run the updated workflow, inspect its generated MP4 and licensing manifest, and adjust any genuine API or quality failures.
+**Next milestone:** compare the cinematic preview to the prior still-image slideshow, then iterate on narration, visuals, accuracy, and actual audience retention. Technical success alone is not evidence of good content.
