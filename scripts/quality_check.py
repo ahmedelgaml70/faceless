@@ -21,6 +21,9 @@ def check() -> None:
     if len(scenes) != len(script.get("scenes", [])):
         failures.append("Mismatch between visuals and script scene counts")
     for scene in scenes:
+        if scene["kind"] == "wikimedia-commons":
+            if int(scene.get("source", {}).get("title_overlap_terms", 0)) < 2:
+                failures.append(f"Commons image lacks sufficient topic overlap: {scene['query']}")
         p = Path(scene["asset"])
         if not p.is_file() or p.stat().st_size < 12_000:
             failures.append(f"Missing or tiny visual: {p}")
