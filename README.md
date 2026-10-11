@@ -1,5 +1,12 @@
 # Faceless Science — visuals-first Gemini Shorts
 
+## Current recommended workflow (moving footage)
+
+**Use [Real Motion Footage Preview](https://github.com/ahmedelgaml70/faceless/actions/workflows/motion-preview.yml), not the legacy photo slideshow generator.** The experimental motion workflow has passed end-to-end tests with five genuine Wikimedia video clips, Gemini-matched narration, corrected compact subtitles, and a successful technical QA result. It is manual-only and never uploads to YouTube.
+
+The most recent output still has a quality limitation: Commons videos tend to be landscape-oriented, which requires reframing for vertical Shorts. To obtain **native portrait, full-screen stock footage at no API charge**, add a free Pexels API key as the GitHub Actions secret PEXELS_API_KEY. The source picker explicitly requests portrait video from Pexels and preserves attribution. Even with portrait footage, human editorial review is required before publishing.
+
+
 **Version 5: photo-grounded storytelling.** This project automatically creates faceless educational Shorts on GitHub Actions using Gemini, authentic Wikimedia Commons photography, Kokoro narration and FFmpeg. It does **not** draw SVGs, graphics, cartoons, diagrams, or generate AI substitute images.
 
 ## Why the new pipeline is different
