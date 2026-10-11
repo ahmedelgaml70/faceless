@@ -1,0 +1,30 @@
+name: Validate Faceless Sources
+
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - 'topics.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python scripts
+        run: |
+          python -m py_compile scripts/select_topic.py scripts/prepare_content.py scripts/quality_check.py
+      - name: Test topic rotation
+        run: |
+          TOPIC="$(python scripts/select_topic.py topics.txt)"
+          test -n "$TOPIC"
+          echo "Rotation returns: $TOPIC"
