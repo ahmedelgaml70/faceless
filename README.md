@@ -27,7 +27,7 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 
 ### QA
 
-`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least two Commons visuals; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
+`scripts/quality_check.py` verifies the count and dimensions of scene assets; at least three unique Commons photographs and two direct scene matches; that the render used only the prepared local assets; one 720×1280 video track, an audio track, plausible Shorts length, nonblank imagery, attribution when required, correct branding, and matching script/scene counts. It writes `prepared/quality_report.json`. It does **not** validate scientific truth or guarantee viewer interest or YouTube monetization eligibility.
 
 ### Optional YouTube private uploads
 
@@ -46,9 +46,9 @@ The `schedule` event in `.github/workflows/generate-shorts.yml` remains commente
 - `.github/workflows/generate-shorts.yml`: manual workflow and optional private upload
 - `.github/workflows/validate.yml`: lightweight syntax and topic-rotation check
 - `scripts/select_topic.py`: rotation of pre-selected factual topics
-- `scripts/prepare_content.py`: Gemini + Wikimedia + custom diagram assets
+- `scripts/prepare_content.py`: Gemini + strictly licensed Commons real photographs; no illustrations
 - `scripts/cinematic_post.py`: **no drawn graphics**; real-photo camera movement and text-only captions
 - `scripts/quality_check.py`: fail-closed post-render gate
 - `topics.txt`: topic bank
 
-**Next milestone:** compare the cinematic preview to the prior still-image slideshow, then iterate on narration, visuals, accuracy, and actual audience retention. Technical success alone is not evidence of good content.
+**Next milestone:** inspect a no-drawing video preview, verify source-visual relevance, and improve narration and audience pacing. Technical success alone is not evidence of content quality.
