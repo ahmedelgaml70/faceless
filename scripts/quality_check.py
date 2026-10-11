@@ -82,6 +82,18 @@ def check() -> None:
     else:
         metadata = {}
 
+    cinematic = Path("prepared/cinematic_report.json")
+    if not cinematic.is_file():
+        failures.append("Missing cinematic motion-render report")
+    else:
+        production = json.loads(cinematic.read_text(encoding="utf-8"))
+        if production.get("version") != "cinematic-1":
+            failures.append("Unexpected cinematic production version")
+        if len(production.get("scene_types", [])) != len(scenes):
+            failures.append("Cinematic scene types do not match scripted scenes")
+        if video and abs(float(production.get("duration", 0)) - float(metadata.get("duration", 0))) > 1.2:
+            failures.append("Cinematic report and source metadata duration disagree")
+
     report = {
         "status": "PASS" if not failures else "FAIL",
         "checks_are_not_fact_checking": True,
