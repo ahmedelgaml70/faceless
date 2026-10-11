@@ -115,7 +115,7 @@ def pexels_sources(phrase: str) -> list[dict]:
     out=[]
     for video in payload.get("videos",[]):
         duration=int(video.get("duration") or 0)
-        if not 5<=duration<=120:
+        if not 11<=duration<=120:
             continue
         files=[f for f in video.get("video_files",[])
                if f.get("file_type")=="video/mp4" and f.get("link")
@@ -233,7 +233,7 @@ def pick_moving_shots(topic: str) -> tuple[list[VideoShot],dict]:
                 library.append((int(o["provider"]=="Pexels"),overlap,o))
     library.sort(key=lambda v:(-v[0],-v[1]))
     report={"topic":topic,"searches":terms,"candidates":len(library),
-            "videos_examined":[],"video_policy":"real-moving-licensed-footage-only"}
+            "videos_examined":[],"min_source_duration_seconds":11,"video_policy":"real-moving-licensed-footage-only"}
     LOG.info("Moving-video search found %d candidate video files",len(library))
     if not library:
         raise RuntimeError("No compatible Commons video results. Add free PEXELS_API_KEY or try a footage-rich topic.")
@@ -248,7 +248,7 @@ def pick_moving_shots(topic: str) -> tuple[list[VideoShot],dict]:
             continue
         try:
             media=probe_movie(temp)
-            if not (5<=media["duration"]<=180 and
+            if not (11<=media["duration"]<=180 and
                     media["width"]>=480 and media["height"]>=320):
                 continue
             frame=still_from_clip(temp,min(media["duration"]*.35,4))
