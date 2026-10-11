@@ -48,3 +48,5 @@ How magnetism drives an electric motor
 # Third visual preview trigger (ignored)
 
 # Photo-only integration check; ignored by topic chooser
+
+# Authentic-photo coverage test v2 (ignored)
