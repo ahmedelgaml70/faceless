@@ -57,7 +57,7 @@ jobs:
           git clone https://github.com/Chamanrajragu/purffle-shorts.git engine
           git -C engine checkout --detach bab8d5f97b8452d72287b0ee3af3cb8cc1a23bc8
           python -m pip install -e './engine[kokoro]'
-      - name: Source and verify ACTUAL moving documentary clips
+      - name: Discover and verify licensed moving waterfall footage
         working-directory: engine
         env:
           REQUESTED_TOPIC: ${{ inputs.topic || 'How waterfalls shape rocky canyons' }}
