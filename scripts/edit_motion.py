@@ -15,6 +15,7 @@ import subprocess
 import sys
 
 from cinematic_post import srt,groups,timeline,probe
+from prepare_motion import probe_movie
 
 FPS=24
 W,H=720,1280
@@ -77,15 +78,30 @@ def compile_video(root: Path):
         headroom=shot["duration"]-span
         start=min(1.8, max(0,headroom*0.22))
         output=temporary/f"shot_{index:02d}.mp4"
-        # Source footage is decoded and reframed, not re-generated or drawn.
-        # For most stock videos fill portrait, avoiding static pillarboxing.
-        filt=(f"scale={W}:{H}:force_original_aspect_ratio=increase,"
-              f"crop={W}:{H},setsar=1,fps={FPS},format=yuv420p")
+        # Wide shots cannot be cropped to 9:16 without losing 2/3 of the
+        # actual waterfall. Retain the full sharp VIDEO in the foreground,
+        # over a darkened, softly blurred duplicate of the SAME MOVING CLIP.
+        # Both layers are documentary frames, never synthetic SVG artwork.
+        dim=probe_movie(original)
+        if dim["width"]/max(1,dim["height"])>=0.83:
+            filt=(
+                f"[0:v]split=2[bg][fg];"
+                f"[bg]scale={W}:{H}:force_original_aspect_ratio=increase,"
+                f"crop={W}:{H},boxblur=17:2,eq=brightness=-0.16[back];"
+                f"[fg]scale={W}:980:force_original_aspect_ratio=decrease,setsar=1[sharp];"
+                f"[back][sharp]overlay=(W-w)/2:(H-h)/2:shortest=1,"
+                f"fps={FPS},format=yuv420p[out]"
+            )
+            render_filter=["-filter_complex",filt,"-map","[out]"]
+        else:
+            filt=(f"scale={W}:{H}:force_original_aspect_ratio=increase,"
+                  f"crop={W}:{H},setsar=1,fps={FPS},format=yuv420p")
+            render_filter=["-vf",filt]
         run(["ffmpeg","-hide_banner","-loglevel","error","-y",
              "-ss",f"{start:.3f}","-i",str(original),
-             "-t",f"{span:.3f}","-vf",filt,
+             "-t",f"{span:.3f}",*render_filter,
              "-an","-c:v","libx264","-preset","veryfast","-crf","20",
-             "-g","48","-r",str(FPS),str(output)],timeout=120)
+             "-g","48","-r",str(FPS),str(output)],timeout=140)
         parts.append(output)
         print(f"MOVING CUT {index+1}/{len(scenes)}: "
               f"{shot['source']['title'][:45]} ({span:.1f}s)",flush=True)
