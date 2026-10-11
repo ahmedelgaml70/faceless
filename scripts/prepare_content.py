@@ -88,6 +88,15 @@ def word_stems(text: str) -> set[str]:
 def relevant_title(query: str, title: str) -> tuple[bool, int]:
     """Require literal topic overlap; avoid matching one ambiguous term such as 'jet'."""
     q = word_stems(query)
+    low_title = title.casefold()
+    # Commons filenames sometimes match two science terms by coincidence:
+    # 'Sound Wave' can mean a football supporters' group rather than sound.
+    unrelated_contexts = (
+        "sounders", "post-game", "football club", "soccer", "sports team",
+        "album cover", "concert poster", "advertising poster",
+    )
+    if any(bad in low_title for bad in unrelated_contexts):
+        return False, 0
     t = word_stems(title.replace("File:", ""))
     overlap = len(q & t)
     return overlap >= (2 if len(q) >= 2 else 1), overlap
